@@ -142,8 +142,22 @@ ul{margin:8px 0 0;padding-left:18px;font-size:14px;line-height:1.55}
 /* ───────────────────────── datos base ───────────────────────── */
 /* Respaldo local: se usa si el Sheet no está configurado o no responde. */
 const FERIADOS_LOCAL = [
+  ["2026-01-01","Año Nuevo","Feriado"],
+  ["2026-02-16","Carnaval","Feriado"],
+  ["2026-02-17","Carnaval","Feriado"],
+  ["2026-03-23","Puente turístico","Turístico"],
+  ["2026-03-24","Día de la Memoria","Feriado"],
+  ["2026-04-02","Malvinas","Feriado"],
+  ["2026-04-03","Viernes Santo","Feriado"],
+  ["2026-05-01","Día del Trabajador","Feriado"],
+  ["2026-05-25","Revolución de Mayo","Feriado"],
+  ["2026-06-15","Güemes (trasladado del 17)","Feriado"],
+  ["2026-06-20","Belgrano","Feriado"],
+  ["2026-07-09","Independencia","Feriado"],
+  ["2026-07-10","Puente turístico","Turístico"],
+  ["2026-08-17","San Martín","Feriado"],
   ["2026-10-12","Diversidad Cultural","Feriado"],
-  ["2026-11-23","Soberanía Nacional (trasladado)","Feriado"],
+  ["2026-11-23","Soberanía Nacional (trasladado del 20)","Feriado"],
   ["2026-12-07","Puente turístico","Turístico"],
   ["2026-12-08","Inmaculada Concepción","Feriado"],
   ["2026-12-25","Navidad","Feriado"],
@@ -172,7 +186,7 @@ const lunesDe=d=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.s
 /* ───────────────────────── estado ───────────────────────── */
 const POR_DEFECTO={
   meta:60, preferidos:[1,2,5], ordenRefuerzo:[3,4], colchon:false,
-  usarTuristicos:true, licencias:[], overrides:{}, extras:[], sheetUrl:""
+  usarTuristicos:true, licencias:[], overrides:{}, extras:[], excluidos:[], sheetUrl:""
 };
 let cfg=Object.assign({},POR_DEFECTO);
 let feriadosRemotos=null, syncEstado="local", syncCuando=null;
@@ -288,7 +302,8 @@ function mapaFeriados(){
   const base=feriadosRemotos||FERIADOS_LOCAL;
   const m=new Map();
   base.forEach(([f,n,t])=>{ if(t==="Turístico"&&!cfg.usarTuristicos) return; m.set(f,n) });
-  (cfg.extras||[]).forEach(e=>m.set(e.fecha,e.nombre||"Feriado propio"));
+  (cfg.excluidos||[]).forEach(f=>m.delete(f));          // los que sacaste a mano
+  (cfg.extras||[]).forEach(e=>m.set(e.fecha,e.nombre||"Feriado propio"));  // los tuyos mandan
   return m;
 }
 
@@ -543,12 +558,57 @@ function pintarTabs(){
 
   if(tab==="feriados"){
     const fs=P.dias.filter(x=>x.fer);
-    p.innerHTML=`<div style="margin-top:14px"><div class="eyebrow">Feriados de este mes</div>
+    const esPropio=k=>(cfg.extras||[]).some(e=>e.fecha===k);
+    p.innerHTML=`<div style="margin-top:14px">
+      <div class="eyebrow">Feriados de ${MESES[cursor.getMonth()]}</div>
       <div style="margin-top:8px;font-size:14px">${fs.length?fs.map(x=>
-        `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line)">
-          <span>${x.dia} · ${x.fer}</span><span style="color:var(--ink40);font-size:12px">${DC[(x.wd+6)%7]}</span></div>`).join("")
-        :`<span style="color:var(--ink40)">Sin feriados. Mes completo.</span>`}</div>
-      <div class="hint" style="margin-top:14px">Los feriados salen del Sheet. Para agregar uno, cargalo allá y todos lo reciben.</div></div>`;
+        `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)">
+          <span>${x.dia} · ${x.fer}${esPropio(x.k)?` <span style="font-size:11px;color:var(--ink40)">(tuyo)</span>`:""}
+            <br><span style="font-size:12px;color:var(--ink40)">${DC[(x.wd+6)%7]}</span></span>
+          <button class="quitarf" data-k="${x.k}" style="font-size:12px;white-space:nowrap">Quitar</button></div>`).join("")
+        :`<span style="color:var(--ink40)">Sin feriados este mes.</span>`}</div>
+
+      <div class="eyebrow" style="margin-top:20px">Agregar uno a mano</div>
+      <div class="hint">Para asuetos bancarios, feriados provinciales o días que el banco te dé libres.</div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <input type="date" id="fdate" style="flex:1">
+        <input id="fnom" placeholder="Nombre" style="flex:1">
+      </div>
+      <button class="on" id="fadd" style="width:100%;margin-top:6px">Agregar feriado</button>
+
+      ${(cfg.extras||[]).length?`<div class="eyebrow" style="margin-top:20px">Tus feriados propios</div>
+        <div class="chips">${cfg.extras.map(e=>
+          `<button class="delex chip" data-k="${e.fecha}" style="border:1px solid var(--line);background:#F3EAD6">${e.fecha.slice(8)}/${e.fecha.slice(5,7)} ${e.nombre} ✕</button>`).join("")}</div>`:""}
+
+      ${(cfg.excluidos||[]).length?`<div class="eyebrow" style="margin-top:20px">Quitados por vos</div>
+        <div class="chips">${cfg.excluidos.map(f=>
+          `<button class="delexc chip" data-k="${f}" style="border:1px solid var(--line);background:#E9E9E4">${f.slice(8)}/${f.slice(5,7)} restaurar</button>`).join("")}</div>`:""}
+
+      <div class="hint" style="margin-top:16px">Lo que cargues acá vale solo en tu teléfono. Si querés que les llegue a los demás, cargalo en el Sheet.</div></div>`;
+
+    $("fadd").onclick=()=>{
+      const f=$("fdate").value;
+      if(!f) return aviso("Falta la fecha");
+      const n=($("fnom").value||"").trim()||"Feriado propio";
+      cfg.extras=[...(cfg.extras||[]).filter(e=>e.fecha!==f),{fecha:f,nombre:n}]
+        .sort((a,b)=>a.fecha<b.fecha?-1:1);
+      cfg.excluidos=(cfg.excluidos||[]).filter(x=>x!==f);
+      guardar(); pintar(); aviso("Feriado agregado");
+    };
+    p.querySelectorAll(".quitarf").forEach(b=>b.onclick=()=>{
+      const k=b.dataset.k;
+      if(esPropio(k)) cfg.extras=cfg.extras.filter(e=>e.fecha!==k);
+      else cfg.excluidos=[...new Set([...(cfg.excluidos||[]),k])].sort();
+      guardar(); pintar(); aviso("Feriado quitado");
+    });
+    p.querySelectorAll(".delex").forEach(b=>b.onclick=()=>{
+      cfg.extras=cfg.extras.filter(e=>e.fecha!==b.dataset.k);
+      guardar(); pintar(); aviso("Quitado");
+    });
+    p.querySelectorAll(".delexc").forEach(b=>b.onclick=()=>{
+      cfg.excluidos=cfg.excluidos.filter(x=>x!==b.dataset.k);
+      guardar(); pintar(); aviso("Restaurado");
+    });
   }
 
   if(tab==="licencias"){
