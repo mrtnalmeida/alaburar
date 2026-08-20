@@ -1,5 +1,9 @@
-/* Cache del shell para que abra sin conexión. El CSV del Sheet siempre va a la red primero. */
-const CACHE = "cuota-v1";
+/* Estrategia:
+   - index.html y navegación: red primero, cache como respaldo. Así los cambios llegan siempre.
+   - Resto de archivos propios: cache primero, y se refresca en segundo plano.
+   - El CSV del Sheet nunca pasa por acá.
+*/
+const CACHE = "cuota-v2";
 const SHELL = ["./", "./index.html", "./manifest.json", "./icono.png"];
 
 self.addEventListener("install", e => {
@@ -13,15 +17,35 @@ self.addEventListener("activate", e => {
 });
 
 self.addEventListener("fetch", e => {
-  const url = new URL(e.request.url);
-  if (e.request.method !== "GET") return;
-  if (url.hostname.includes("docs.google.com")) return;      // el Sheet nunca se cachea acá
-  if (url.origin !== location.origin) return;                // fuentes y demás, al navegador
+  const req = e.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (url.hostname.includes("docs.google.com")) return;   // el Sheet siempre va a la red
+  if (url.origin !== location.origin) return;             // fuentes y demás, al navegador
+
+  const esPagina = req.mode === "navigate" || url.pathname.endsWith("/") || url.pathname.endsWith("index.html");
+
+  if (esPagina) {
+    // Red primero: si hay señal, siempre ves la última versión.
+    e.respondWith(
+      fetch(req).then(r => {
+        const copia = r.clone();
+        caches.open(CACHE).then(c => c.put("./index.html", copia));
+        return r;
+      }).catch(() => caches.match("./index.html").then(hit => hit || caches.match("./")))
+    );
+    return;
+  }
+
+  // Estáticos: responde del cache y actualiza atrás.
   e.respondWith(
-    caches.match(e.request).then(hit => hit || fetch(e.request).then(r => {
-      const copia = r.clone();
-      caches.open(CACHE).then(c => c.put(e.request, copia));
-      return r;
-    }).catch(() => caches.match("./index.html")))
+    caches.match(req).then(hit => {
+      const red = fetch(req).then(r => {
+        const copia = r.clone();
+        caches.open(CACHE).then(c => c.put(req, copia));
+        return r;
+      }).catch(() => hit);
+      return hit || red;
+    })
   );
 });
