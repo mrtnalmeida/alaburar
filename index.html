@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cuota</title>
+<meta name="theme-color" content="#101E2B">
+<meta name="description" content="Calculadora de presencialidad mensual con feriados de Argentina.">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cuota">
+<link rel="apple-touch-icon" href="icono.png">
+<link rel="icon" href="icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#101E2B; --ink70:#3D4E5C; --ink40:#8494A0;
+  --paper:#EDEFEA; --card:#F7F8F5; --line:#D3D8D1;
+  --oficina:#1D4E7C; --casa:#5E8A66; --feriado:#A8791F; --alerta:#B23A2E;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:'Public Sans',system-ui,sans-serif; font-size:15px;
+  padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom);
+}
+.wrap{max-width:640px;margin:0 auto;padding:20px 16px 48px}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink40)}
+h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:30px;margin:6px 0 0;line-height:1;letter-spacing:-.02em}
+h1 span{color:var(--ink40)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:14px;margin-top:12px}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+button{font-family:'Public Sans',sans-serif;font-size:13px;padding:7px 10px;border-radius:3px;
+  border:1px solid var(--line);background:transparent;color:var(--ink70);cursor:pointer}
+button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--oficina);outline-offset:2px}
+.ratio{font-family:'Bricolage Grotesque',sans-serif;font-size:46px;font-weight:700;line-height:.9;letter-spacing:-.03em}
+.ratio small{font-size:22px}
+.bar{position:relative;height:10px;background:#E2E6E0;margin-top:14px;border-radius:2px;overflow:visible}
+.bar i{display:block;height:100%;border-radius:2px;transition:width .25s ease}
+.bar u{position:absolute;top:-4px;width:2px;height:18px;background:var(--ink);transform:translateX(-1px)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.grid .h{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink40);text-align:center;margin-bottom:6px}
+.day{aspect-ratio:1;width:100%;padding:0;border-radius:3px;position:relative;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px}
+.day.ofi{background:var(--oficina);color:#fff;border-color:var(--oficina);font-weight:600}
+.day.casa{background:#E4EDE4;color:var(--casa);border-color:#CFDECF;font-weight:500}
+.day.fer{background:#F3EAD6;color:var(--feriado);border-color:#E3D3AF}
+.day.lic{background:#E9E9E4;color:var(--ink40)}
+.day.off{background:transparent;color:var(--ink40)}
+.day b{position:absolute;top:3px;right:3px;width:4px;height:4px;border-radius:50%}
+.day small{font-size:7px;line-height:1}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--ink70)}
+.legend span{display:flex;align-items:center;gap:5px}
+.sw{width:10px;height:10px;border:1px solid var(--line);border-radius:2px;position:relative}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.chip{font-family:'JetBrains Mono',monospace;font-size:12px;padding:4px 7px;border-radius:3px;cursor:pointer}
+.title{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:16px}
+input,textarea,select{font-family:'Public Sans',sans-serif;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:3px;background:#fff;color:var(--ink);width:100%}
+textarea{font-family:'JetBrains Mono',monospace;font-size:10px;word-break:break-all;resize:vertical}
+label.chk{display:flex;gap:9px;align-items:flex-start;font-size:14px;cursor:pointer}
+label.chk input{width:auto;margin-top:3px;accent-color:var(--oficina)}
+.hint{font-size:12px;color:var(--ink40);line-height:1.5;margin-top:4px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--paper);
+  padding:10px 18px;border-radius:3px;font-size:13px;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+ul{margin:8px 0 0;padding-left:18px;font-size:14px;line-height:1.55}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Prueba de cumplimiento · asistencia presencial</div>
+  <div class="row">
+    <h1 id="titulo">—</h1>
+    <div style="display:flex;gap:6px">
+      <button id="prev" aria-label="Mes anterior">←</button>
+      <button id="next" aria-label="Mes siguiente">→</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="align-items:flex-end">
+      <div>
+        <div class="ratio" id="pct">—</div>
+        <div class="eyebrow" id="sub" style="margin-top:6px">—</div>
+      </div>
+      <div style="text-align:right">
+        <div id="estado" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.06em"></div>
+        <div id="minimo" style="font-size:12px;color:var(--ink70);margin-top:4px"></div>
+      </div>
+    </div>
+    <div class="bar"><i id="barfill"></i><u id="barnotch"></u></div>
+    <div class="eyebrow" id="notchtxt" style="margin-top:6px"></div>
+  </div>
+
+  <div class="card">
+    <div class="grid" id="cabecera"></div>
+    <div class="grid" id="calendario"></div>
+    <div class="legend">
+      <span><i class="sw" style="background:#1D4E7C"></i>Oficina</span>
+      <span><i class="sw" style="background:#CFDECF"></i>Casa</span>
+      <span><i class="sw" style="background:#E3D3AF"></i>Feriado</span>
+      <span><i class="sw" style="background:#E9E9E4"></i>Licencia</span>
+      <span><i class="sw"><b style="position:absolute;top:1px;right:1px;width:3px;height:3px;border-radius:50%;background:#101E2B;display:block"></b></i>Cambiado por vos</span>
+    </div>
+    <div class="eyebrow" style="margin-top:10px">Tocá un día hábil para pasarlo de oficina a casa · mantené apretado para marcar licencia</div>
+  </div>
+
+  <div class="card" id="alma" hidden></div>
+  <div class="card" id="margen"></div>
+  <div class="card" id="notas" hidden></div>
+
+  <div class="card" style="border-top:3px solid var(--oficina)">
+    <div class="row"><div class="title">Vas a la oficina</div><div class="eyebrow" id="nofi"></div></div>
+    <div class="chips" id="lofi"></div>
+  </div>
+  <div class="card" style="border-top:3px solid var(--casa)">
+    <div class="row"><div class="title">Te quedás en casa</div><div class="eyebrow" id="ncasa"></div></div>
+    <div class="chips" id="lcasa"></div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+    <button class="on" id="copiar" style="flex:1;min-width:130px">Copiar resumen</button>
+    <button id="ics" style="flex:1;min-width:130px">Descargar .ics</button>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;gap:6px;flex-wrap:wrap" id="tabs"></div>
+    <div id="panel"></div>
+  </div>
+
+  <div class="eyebrow" id="pie" style="margin-top:18px;line-height:1.6"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ───────────────────────── datos base ───────────────────────── */
+/* Respaldo local: se usa si el Sheet no está configurado o no responde. */
+const FERIADOS_LOCAL = [
+  ["2026-01-01","Año Nuevo","Feriado"],
+  ["2026-02-16","Carnaval","Feriado"],
+  ["2026-02-17","Carnaval","Feriado"],
+  ["2026-03-23","Puente turístico","Turístico"],
+  ["2026-03-24","Día de la Memoria","Feriado"],
+  ["2026-04-02","Malvinas","Feriado"],
+  ["2026-04-03","Viernes Santo","Feriado"],
+  ["2026-05-01","Día del Trabajador","Feriado"],
+  ["2026-05-25","Revolución de Mayo","Feriado"],
+  ["2026-06-15","Güemes (trasladado del 17)","Feriado"],
+  ["2026-06-20","Belgrano","Feriado"],
+  ["2026-07-09","Independencia","Feriado"],
+  ["2026-07-10","Puente turístico","Turístico"],
+  ["2026-08-17","San Martín","Feriado"],
+  ["2026-10-12","Diversidad Cultural","Feriado"],
+  ["2026-11-23","Soberanía Nacional (trasladado del 20)","Feriado"],
+  ["2026-12-07","Puente turístico","Turístico"],
+  ["2026-12-08","Inmaculada Concepción","Feriado"],
+  ["2026-12-25","Navidad","Feriado"],
+  ["2027-01-01","Año Nuevo","Feriado"],
+  ["2027-02-08","Carnaval","Feriado"],
+  ["2027-02-09","Carnaval","Feriado"],
+  ["2027-03-24","Día de la Memoria","Feriado"],
+  ["2027-03-26","Viernes Santo","Feriado"],
+  ["2027-04-02","Malvinas","Feriado"],
+  ["2027-05-01","Día del Trabajador","Feriado"],
+  ["2027-05-25","Revolución de Mayo","Feriado"],
+  ["2027-06-20","Belgrano","Feriado"],
+  ["2027-07-09","Independencia","Feriado"],
+  ["2027-12-08","Inmaculada Concepción","Feriado"],
+  ["2027-12-25","Navidad","Feriado"]
+];
+
+const MESES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const DC=["lun","mar","mié","jue","vie","sáb","dom"];
+const ND={1:"lunes",2:"martes",3:"miércoles",4:"jueves",5:"viernes"};
+
+const $=id=>document.getElementById(id);
+const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const lunesDe=d=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+6)%7));return key(x)};
+
+/* ───────────────────────── estado ───────────────────────── */
+const POR_DEFECTO={
+  meta:60, preferidos:[1,2,5], ordenRefuerzo:[3,4], colchon:false,
+  usarTuristicos:true, licencias:[], overrides:{}, extras:[], excluidos:[], sheetUrl:""
+};
+let cfg=Object.assign({},POR_DEFECTO);
+let feriadosRemotos=null, syncEstado="local", syncCuando=null;
+let cursor=new Date(new Date().getFullYear(),new Date().getMonth()+1,1);
+let tab=null;
+
+let almacen={escribe:false,persistido:false,instalada:false};
+
+function cargar(){
+  try{
+    const raw=localStorage.getItem("cuota:config");
+    if(raw) cfg=Object.assign({},POR_DEFECTO,JSON.parse(raw));
+  }catch(e){}
+}
+function guardar(){
+  try{ localStorage.setItem("cuota:config",JSON.stringify(cfg)); }
+  catch(e){ aviso("No se pudo guardar en este navegador"); }
+}
+
+/* ¿Está instalada? Pesa en la heurística con la que Chrome concede la persistencia. */
+function esInstalada(){
+  return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches)
+      || window.navigator.standalone === true;
+}
+/* Prueba real de escritura: si el navegador está en privado, esto falla. */
+function pruebaEscritura(){
+  try{
+    localStorage.setItem("cuota:test","1");
+    const ok=localStorage.getItem("cuota:test")==="1";
+    localStorage.removeItem("cuota:test");
+    return ok;
+  }catch(e){ return false }
+}
+/* Algunos navegadores lo reevalúan en cada sesión, así que se pide en cada arranque. */
+async function pedirPersistencia(){
+  almacen.escribe=pruebaEscritura();
+  almacen.instalada=esInstalada();
+  try{
+    if(navigator.storage&&navigator.storage.persist){
+      almacen.persistido=await navigator.storage.persisted();
+      if(!almacen.persistido) almacen.persistido=await navigator.storage.persist();
+    }
+  }catch(e){}
+  pintar();
+}
+
+/* ───────────────────────── Google Sheet ───────────────────────── */
+function normalizarUrl(u){
+  u=(u||"").trim();
+  if(!u) return "";
+  if(u.includes("/pub?")||u.includes("output=csv")||u.includes("tqx=out:csv")) return u;
+  const m=u.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if(m) return `https://docs.google.com/spreadsheets/d/${m[1]}/gviz/tq?tqx=out:csv`;
+  return u;
+}
+function parseCSV(txt){
+  const filas=[]; let f=[],c="",q=false;
+  for(let i=0;i<txt.length;i++){
+    const ch=txt[i];
+    if(q){
+      if(ch==='"'){ if(txt[i+1]==='"'){c+='"';i++} else q=false }
+      else c+=ch;
+    } else if(ch==='"') q=true;
+    else if(ch===","){ f.push(c); c="" }
+    else if(ch==="\n"){ f.push(c); filas.push(f); f=[]; c="" }
+    else if(ch!=="\r") c+=ch;
+  }
+  if(c||f.length){ f.push(c); filas.push(f) }
+  return filas;
+}
+function aFecha(s){
+  s=(s||"").trim();
+  let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(m) return `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+  const d=new Date(s);
+  return isNaN(d)?null:key(d);
+}
+async function sincronizar(silencioso){
+  const url=normalizarUrl(cfg.sheetUrl);
+  if(!url){ syncEstado="local"; return }
+  syncEstado="cargando"; pintar();
+  try{
+    const r=await fetch(url,{cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const filas=parseCSV(await r.text());
+    const out=[];
+    for(const fila of filas){
+      const f=aFecha(fila[0]);
+      if(!f) continue;                       // saltea encabezado y filas vacías
+      const nombre=(fila[1]||"Feriado").trim();
+      const tipo=/tur/i.test(fila[2]||"")?"Turístico":"Feriado";
+      out.push([f,nombre,tipo]);
+    }
+    if(!out.length) throw new Error("sin filas válidas");
+    feriadosRemotos=out; syncEstado="ok"; syncCuando=new Date();
+    try{ localStorage.setItem("cuota:feriados",JSON.stringify({out,t:Date.now()})) }catch(e){}
+    if(!silencioso) aviso(out.length+" feriados sincronizados");
+  }catch(e){
+    syncEstado="error";
+    try{
+      const c=JSON.parse(localStorage.getItem("cuota:feriados")||"null");
+      if(c&&c.out){ feriadosRemotos=c.out; syncEstado="cache"; syncCuando=new Date(c.t) }
+    }catch(_){}
+    if(!silencioso) aviso("No se pudo leer el Sheet");
+  }
+  pintar();
+}
+
+/* ───────────────────────── cálculo ───────────────────────── */
+function mapaFeriados(){
+  const base=feriadosRemotos||FERIADOS_LOCAL;
+  const m=new Map();
+  base.forEach(([f,n,t])=>{ if(t==="Turístico"&&!cfg.usarTuristicos) return; m.set(f,n) });
+  (cfg.excluidos||[]).forEach(f=>m.delete(f));          // los que sacaste a mano
+  (cfg.extras||[]).forEach(e=>m.set(e.fecha,e.nombre||"Feriado propio"));  // los tuyos mandan
+  return m;
+}
+
+function calcular(){
+  const y=cursor.getFullYear(), mm=cursor.getMonth();
+  const fer=mapaFeriados(), lic=new Set(cfg.licencias);
+  const ult=new Date(y,mm+1,0).getDate();
+  const dias=[];
+  for(let i=1;i<=ult;i++){
+    const d=new Date(y,mm,i), k=key(d), wd=d.getDay();
+    const finde=wd===0||wd===6, ff=fer.get(k)||null, ll=lic.has(k);
+    dias.push({k,d,dia:i,wd,finde,fer:ff,lic:ll,habil:!finde&&!ff&&!ll});
+  }
+  const habiles=dias.filter(x=>x.habil);
+  const base=Math.ceil(habiles.length*cfg.meta/100);
+  const requeridos=Math.min(habiles.length,base+(cfg.colchon?1:0));
+
+  const noHabil=new Set(dias.filter(x=>!x.habil).map(x=>x.k));
+  const libre=f=>{const t=new Date(f);return noHabil.has(key(t))||t.getMonth()!==mm};
+  const puente=x=>{
+    const p=new Date(x.d);p.setDate(p.getDate()-1);
+    const n=new Date(x.d);n.setDate(n.getDate()+1);
+    return (libre(p)?1:0)+(libre(n)?1:0);
+  };
+
+  const pref=habiles.filter(x=>cfg.preferidos.includes(x.wd));
+  const resto=habiles.filter(x=>!cfg.preferidos.includes(x.wd));
+  let elegidos, notas=[];
+
+  if(pref.length>=requeridos){
+    const sacar=pref.length-requeridos;
+    const rank=[...pref].sort((a,b)=>puente(b)-puente(a)||b.wd-a.wd||a.dia-b.dia);
+    const fuera=new Set(rank.slice(0,sacar).map(x=>x.k));
+    elegidos=pref.filter(x=>!fuera.has(x.k));
+    rank.slice(0,sacar).forEach(x=>notas.push(`Te sobra cuota: podés quedarte en casa el ${ND[x.wd]} ${x.dia}.`));
+  }else{
+    const faltan=requeridos-pref.length;
+    const porSem={};
+    pref.forEach(x=>{const w=lunesDe(x.d);porSem[w]=(porSem[w]||0)+1});
+    const rank=[...resto].sort((a,b)=>{
+      const sa=porSem[lunesDe(a.d)]||0, sb=porSem[lunesDe(b.d)]||0;
+      if(sa!==sb) return sa-sb;
+      const oa=cfg.ordenRefuerzo.indexOf(a.wd), ob=cfg.ordenRefuerzo.indexOf(b.wd);
+      if(oa!==ob) return (oa<0?9:oa)-(ob<0?9:ob);
+      return a.dia-b.dia;
+    });
+    const suma=rank.slice(0,faltan);
+    elegidos=[...pref,...suma].sort((a,b)=>a.dia-b.dia);
+    suma.forEach(x=>notas.push(`Sumá el ${ND[x.wd]} ${x.dia} para llegar a la cuota.`));
+  }
+
+  const autoSet=new Set(elegidos.map(x=>x.k));
+  const mesK=`${y}-${String(mm+1).padStart(2,"0")}`;
+  const ov=cfg.overrides[mesK]||{};
+  const setOf=new Set();
+  habiles.forEach(x=>{
+    const marca=ov[x.k];
+    if(marca===true||(marca===undefined&&autoSet.has(x.k))) setOf.add(x.k);
+  });
+  const tocados=habiles.filter(x=>ov[x.k]!==undefined&&ov[x.k]!==autoSet.has(x.k));
+  elegidos=habiles.filter(x=>setOf.has(x.k));
+  const casa=habiles.filter(x=>!setOf.has(x.k));
+  const pct=habiles.length?elegidos.length/habiles.length*100:0;
+
+  dias.filter(x=>x.fer&&x.wd>=1&&x.wd<=5&&cfg.preferidos.includes(x.wd))
+      .forEach(x=>notas.unshift(`${x.fer} cae ${ND[x.wd]} ${x.dia}, uno de tus días fijos.`));
+
+  return {dias,habiles,base,elegidos,casa,setOf,pct,notas,tocados,editado:tocados.length>0,mesK};
+}
+
+/* ───────────────────────── acciones ───────────────────────── */
+let P=null;
+function toggleDia(k){
+  const ov=Object.assign({},cfg.overrides[P.mesK]||{});
+  ov[k]=!P.setOf.has(k);
+  cfg.overrides=Object.assign({},cfg.overrides,{[P.mesK]:ov});
+  guardar(); pintar();
+}
+function toggleLicencia(k){
+  const s=new Set(cfg.licencias);
+  s.has(k)?s.delete(k):s.add(k);
+  cfg.licencias=[...s].sort();
+  guardar(); pintar();
+}
+function volverSugerido(){
+  const o=Object.assign({},cfg.overrides); delete o[P.mesK];
+  cfg.overrides=o; guardar(); pintar();
+}
+let tToast;
+function aviso(t){
+  const el=$("toast"); el.textContent=t; el.classList.add("show");
+  clearTimeout(tToast); tToast=setTimeout(()=>el.classList.remove("show"),2200);
+}
+function resumenTexto(){
+  const l=a=>a.map(x=>`${x.dia} ${DC[(x.wd+6)%7]}`).join(", ");
+  return `Oficina — ${MESES[cursor.getMonth()]} ${cursor.getFullYear()}\n`+
+    `Hábiles: ${P.habiles.length} · Mínimo ${cfg.meta}%: ${P.base} días\n`+
+    `Voy: ${P.elegidos.length} (${P.pct.toFixed(0)}%)\n\nOFICINA: ${l(P.elegidos)}\n\nCASA: ${l(P.casa)}`;
+}
+function descargarIcs(){
+  const st=d=>key(d).replace(/-/g,"");
+  const nx=d=>{const t=new Date(d);t.setDate(t.getDate()+1);return st(t)};
+  const ev=P.elegidos.map((x,i)=>["BEGIN:VEVENT",`UID:cuota-${x.k}-${i}@oficina`,
+    `DTSTART;VALUE=DATE:${st(x.d)}`,`DTEND;VALUE=DATE:${nx(x.d)}`,
+    "SUMMARY:Oficina","TRANSP:TRANSPARENT","END:VEVENT"].join("\r\n"));
+  const ics=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Cuota//ES",...ev,"END:VCALENDAR"].join("\r\n");
+  const url=URL.createObjectURL(new Blob([ics],{type:"text/calendar"}));
+  const a=document.createElement("a");
+  a.href=url; a.download=`oficina-${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,"0")}.ics`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+/* ───────────────────────── render ───────────────────────── */
+function pintar(){
+  P=calcular();
+  const cumple=P.elegidos.length>=P.base, delta=P.elegidos.length-P.base;
+
+  $("titulo").innerHTML=`${MESES[cursor.getMonth()]} <span>${cursor.getFullYear()}</span>`;
+  $("pct").innerHTML=`${P.pct.toFixed(0)}<small>%</small>`;
+  $("pct").style.color=cumple?"var(--oficina)":"var(--alerta)";
+  $("sub").textContent=`${P.elegidos.length} de ${P.habiles.length} días hábiles`;
+  $("estado").textContent=cumple?"CUMPLE":"NO CUMPLE";
+  $("estado").style.color=cumple?"var(--casa)":"var(--alerta)";
+  $("minimo").textContent=`mínimo ${P.base} día${P.base===1?"":"s"}`;
+  $("barfill").style.width=Math.min(100,P.pct)+"%";
+  $("barfill").style.background=cumple?"var(--oficina)":"var(--alerta)";
+  $("barnotch").style.left=cfg.meta+"%";
+  $("notchtxt").textContent=`la muesca marca tu meta del ${cfg.meta}%`;
+
+  $("cabecera").innerHTML=DC.map(d=>`<div class="h">${d}</div>`).join("");
+
+  const off=(P.dias[0].wd+6)%7;
+  let html="";
+  for(let i=0;i<off;i++) html+="<div></div>";
+  P.dias.forEach(x=>{
+    const ofi=P.setOf.has(x.k), toc=P.tocados.some(t=>t.k===x.k);
+    let cls="day off";
+    if(x.fer) cls="day fer"; else if(x.lic) cls="day lic";
+    else if(ofi) cls="day ofi"; else if(x.habil) cls="day casa";
+    const punto=toc?`<b style="background:${ofi?"#fff":"#101E2B"}"></b>`:"";
+    const tag=x.fer?"<small>fer</small>":x.lic?"<small>lic</small>":"";
+    if(x.habil||x.lic)
+      html+=`<button class="${cls}" data-k="${x.k}" aria-pressed="${ofi}"
+              aria-label="${x.dia} de ${MESES[cursor.getMonth()]}, ${x.lic?"licencia":ofi?"oficina":"casa"}">${x.dia}${tag}${punto}</button>`;
+    else
+      html+=`<div class="${cls}" style="border:1px solid var(--line)" title="${x.fer||""}">${x.dia}${tag}</div>`;
+  });
+  $("calendario").innerHTML=html;
+
+  const al=$("alma");
+  if(!almacen.escribe){
+    al.hidden=false; al.style.borderLeft="3px solid var(--alerta)";
+    al.innerHTML=`<div style="font-size:14px;line-height:1.5">Este navegador no deja guardar datos, probablemente por estar en modo privado. Lo que cambies se pierde al cerrar.</div>`;
+  } else if(!almacen.persistido){
+    al.hidden=false; al.style.borderLeft="3px solid var(--feriado)";
+    al.innerHTML=`<div style="font-size:14px;line-height:1.5">Tus datos se están guardando, pero el navegador todavía no los marcó como protegidos.
+      ${almacen.instalada?"":"Instalala desde el menú del navegador y "}Tocá el botón para pedirlo.</div>
+      <button id="pedirp" style="width:100%;margin-top:10px">Proteger mis datos</button>`;
+    $("pedirp").onclick=async()=>{
+      try{
+        const ok=await navigator.storage.persist();
+        almacen.persistido=ok;
+        aviso(ok?"Datos protegidos":"El navegador lo denegó por ahora");
+        pintar();
+      }catch(e){ aviso("Este navegador no lo soporta") }
+    };
+  } else al.hidden=true;
+
+  const col=delta<0?"var(--alerta)":delta===0?"var(--feriado)":"var(--casa)";
+  $("margen").style.borderLeft=`3px solid ${col}`;
+  $("margen").innerHTML=`<div class="row"><div style="font-size:14px;line-height:1.5">`+
+    (delta<0?`Te faltan <b>${Math.abs(delta)}</b> día${Math.abs(delta)===1?"":"s"} para llegar al mínimo.`
+     :delta===0?`Estás justo en el mínimo. Si te caés un día, no llegás.`
+     :`Vas <b>${delta}</b> día${delta===1?"":"s"} arriba del mínimo.`)+
+    `</div>${P.editado?`<button id="reset" style="font-size:12px;white-space:nowrap">Volver al sugerido</button>`:""}</div>`+
+    (P.editado?`<div class="eyebrow" style="margin-top:8px">${P.tocados.length} día${P.tocados.length===1?"":"s"} cambiado${P.tocados.length===1?"":"s"} por vos</div>`:"");
+  if($("reset")) $("reset").onclick=volverSugerido;
+
+  const n=$("notas");
+  if(!P.editado&&P.notas.length){
+    n.hidden=false; n.style.borderLeft="3px solid var(--feriado)";
+    n.innerHTML=`<div class="eyebrow">Por qué el plan quedó así</div><ul>${P.notas.map(t=>`<li>${t}</li>`).join("")}</ul>`;
+  } else n.hidden=true;
+
+  const chips=(arr,c)=>arr.length?arr.map(x=>
+    `<button class="chip" data-k="${x.k}" style="border:1px solid ${c}33;background:${c}12;color:var(--ink)">${String(x.dia).padStart(2,"0")} ${DC[(x.wd+6)%7]}</button>`).join("")
+    :`<span style="font-size:13px;color:var(--ink40)">Ninguno este mes.</span>`;
+  $("lofi").innerHTML=chips(P.elegidos,"#1D4E7C");
+  $("lcasa").innerHTML=chips(P.casa,"#5E8A66");
+  $("nofi").textContent=P.elegidos.length+" días";
+  $("ncasa").textContent=P.casa.length+" días";
+
+  pintarTabs();
+  const est={ok:"Feriados sincronizados desde tu Sheet",cache:"Sheet sin respuesta · usando la última copia guardada",
+    error:"No se pudo leer el Sheet · usando la lista local",cargando:"Sincronizando…",local:"Usando la lista local de feriados"}[syncEstado];
+  $("pie").textContent=`${est} · Ley 27.399`;
+}
+
+/* Junta días hábiles consecutivos en tramos. Un viernes seguido de un lunes es el mismo tramo. */
+function agruparLicencias(lista){
+  const orden=[...lista].sort();
+  const out=[];
+  let act=null;
+  const siguienteHabil=k=>{
+    const d=new Date(k+"T00:00:00");
+    do{ d.setDate(d.getDate()+1) } while(d.getDay()===0||d.getDay()===6);
+    return key(d);
+  };
+  const lindo=k=>`${k.slice(8)}/${k.slice(5,7)}/${k.slice(2,4)}`;
+  for(const k of orden){
+    if(act && siguienteHabil(act.hasta)===k){ act.hasta=k; act.dias.push(k); act.n++ }
+    else { act={desde:k,hasta:k,dias:[k],n:1}; out.push(act) }
+  }
+  out.forEach(r=>{ r.txt = r.desde===r.hasta ? lindo(r.desde) : `${lindo(r.desde)} → ${lindo(r.hasta)}` });
+  return out;
+}
+
+function pintarTabs(){
+  const defs=[["regla","Regla"],["licencias","Licencias"],["feriados","Feriados"],["datos","Datos"]];
+  $("tabs").innerHTML=defs.map(([id,t])=>`<button data-tab="${id}" class="${tab===id?"on":""}">${t}</button>`).join("");
+  $("tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{tab=tab===b.dataset.tab?null:b.dataset.tab;pintar()});
+  const p=$("panel"); p.innerHTML="";
+  if(!tab) return;
+
+  if(tab==="regla"){
+    p.innerHTML=`
+      <div style="margin-top:14px"><div class="eyebrow">Meta mensual</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+          <input type="range" min="10" max="100" step="5" value="${cfg.meta}" id="rmeta" style="flex:1;accent-color:var(--oficina);padding:0">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:14px;min-width:42px">${cfg.meta}%</span></div></div>
+      <div style="margin-top:14px"><div class="eyebrow">Días fijos de oficina</div>
+        <div style="display:flex;gap:5px;margin-top:6px">${[1,2,3,4,5].map(w=>
+          `<button data-wd="${w}" class="pref ${cfg.preferidos.includes(w)?"on":""}" style="flex:1;padding:8px 0">${DC[w-1]}</button>`).join("")}</div></div>
+      <div style="margin-top:14px"><div class="eyebrow">Si falta un día, primero sumo</div>
+        <div style="display:flex;gap:5px;margin-top:6px">
+          <button data-ref="3" class="ref ${cfg.ordenRefuerzo[0]===3?"on":""}" style="flex:1">miércoles</button>
+          <button data-ref="4" class="ref ${cfg.ordenRefuerzo[0]===4?"on":""}" style="flex:1">jueves</button></div></div>
+      <label class="chk" style="margin-top:14px"><input type="checkbox" id="ccol" ${cfg.colchon?"checked":""}>
+        <span>Sumar un día de colchón<br><span class="hint">Por si te cae una gripe o un día de home forzado.</span></span></label>
+      <label class="chk" style="margin-top:12px"><input type="checkbox" id="ctur" ${cfg.usarTuristicos?"checked":""}>
+        <span>Contar los no laborables turísticos<br><span class="hint">Son optativos para el empleador. Destildalo si en el banco se trabaja.</span></span></label>`;
+    $("rmeta").oninput=e=>{cfg.meta=+e.target.value;guardar();pintar()};
+    p.querySelectorAll(".pref").forEach(b=>b.onclick=()=>{
+      const w=+b.dataset.wd, s=new Set(cfg.preferidos);
+      s.has(w)?s.delete(w):s.add(w);
+      cfg.preferidos=[...s].sort();guardar();pintar()});
+    p.querySelectorAll(".ref").forEach(b=>b.onclick=()=>{
+      cfg.ordenRefuerzo=b.dataset.ref==="3"?[3,4]:[4,3];guardar();pintar()});
+    $("ccol").onchange=e=>{cfg.colchon=e.target.checked;guardar();pintar()};
+    $("ctur").onchange=e=>{cfg.usarTuristicos=e.target.checked;guardar();pintar()};
+  }
+
+  if(tab==="feriados"){
+    const fs=P.dias.filter(x=>x.fer);
+    const esPropio=k=>(cfg.extras||[]).some(e=>e.fecha===k);
+    p.innerHTML=`<div style="margin-top:14px">
+      <div class="eyebrow">Feriados de ${MESES[cursor.getMonth()]}</div>
+      <div style="margin-top:8px;font-size:14px">${fs.length?fs.map(x=>
+        `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)">
+          <span>${x.dia} · ${x.fer}${esPropio(x.k)?` <span style="font-size:11px;color:var(--ink40)">(tuyo)</span>`:""}
+            <br><span style="font-size:12px;color:var(--ink40)">${DC[(x.wd+6)%7]}</span></span>
+          <button class="quitarf" data-k="${x.k}" style="font-size:12px;white-space:nowrap">Quitar</button></div>`).join("")
+        :`<span style="color:var(--ink40)">Sin feriados este mes.</span>`}</div>
+
+      <div class="eyebrow" style="margin-top:20px">Agregar uno a mano</div>
+      <div class="hint">Para asuetos bancarios, feriados provinciales o días que el banco te dé libres.</div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <input type="date" id="fdate" style="flex:1">
+        <input id="fnom" placeholder="Nombre" style="flex:1">
+      </div>
+      <button class="on" id="fadd" style="width:100%;margin-top:6px">Agregar feriado</button>
+
+      ${(cfg.extras||[]).length?`<div class="eyebrow" style="margin-top:20px">Tus feriados propios</div>
+        <div class="chips">${cfg.extras.map(e=>
+          `<button class="delex chip" data-k="${e.fecha}" style="border:1px solid var(--line);background:#F3EAD6">${e.fecha.slice(8)}/${e.fecha.slice(5,7)} ${e.nombre} ✕</button>`).join("")}</div>`:""}
+
+      ${(cfg.excluidos||[]).length?`<div class="eyebrow" style="margin-top:20px">Quitados por vos</div>
+        <div class="chips">${cfg.excluidos.map(f=>
+          `<button class="delexc chip" data-k="${f}" style="border:1px solid var(--line);background:#E9E9E4">${f.slice(8)}/${f.slice(5,7)} restaurar</button>`).join("")}</div>`:""}
+
+      <div class="hint" style="margin-top:16px">Lo que cargues acá vale solo en tu teléfono. Si querés que les llegue a los demás, cargalo en el Sheet.</div></div>`;
+
+    $("fadd").onclick=()=>{
+      const f=$("fdate").value;
+      if(!f) return aviso("Falta la fecha");
+      const n=($("fnom").value||"").trim()||"Feriado propio";
+      cfg.extras=[...(cfg.extras||[]).filter(e=>e.fecha!==f),{fecha:f,nombre:n}]
+        .sort((a,b)=>a.fecha<b.fecha?-1:1);
+      cfg.excluidos=(cfg.excluidos||[]).filter(x=>x!==f);
+      guardar(); pintar(); aviso("Feriado agregado");
+    };
+    p.querySelectorAll(".quitarf").forEach(b=>b.onclick=()=>{
+      const k=b.dataset.k;
+      if(esPropio(k)) cfg.extras=cfg.extras.filter(e=>e.fecha!==k);
+      else cfg.excluidos=[...new Set([...(cfg.excluidos||[]),k])].sort();
+      guardar(); pintar(); aviso("Feriado quitado");
+    });
+    p.querySelectorAll(".delex").forEach(b=>b.onclick=()=>{
+      cfg.extras=cfg.extras.filter(e=>e.fecha!==b.dataset.k);
+      guardar(); pintar(); aviso("Quitado");
+    });
+    p.querySelectorAll(".delexc").forEach(b=>b.onclick=()=>{
+      cfg.excluidos=cfg.excluidos.filter(x=>x!==b.dataset.k);
+      guardar(); pintar(); aviso("Restaurado");
+    });
+  }
+
+  if(tab==="licencias"){
+    const rangos=agruparLicencias(cfg.licencias);
+    const delMes=cfg.licencias.filter(k=>k.startsWith(P.mesK)).length;
+    p.innerHTML=`<div style="margin-top:14px">
+      <div class="eyebrow">Cargar vacaciones o licencia</div>
+      <div class="hint">Se cuentan solo los días hábiles del rango. Salen del total del mes, así que también te bajan el mínimo.</div>
+      <div style="display:flex;gap:6px;margin-top:10px;align-items:center">
+        <input type="date" id="ldesde" style="flex:1">
+        <span style="color:var(--ink40);font-size:13px">a</span>
+        <input type="date" id="lhasta" style="flex:1">
+      </div>
+      <button class="on" id="lagregar" style="width:100%;margin-top:6px">Agregar</button>
+      <div class="hint">Dejá el segundo campo vacío para cargar un solo día.</div>
+
+      <div class="eyebrow" style="margin-top:20px">Cargadas · ${cfg.licencias.length} días hábiles</div>
+      <div style="margin-top:8px;font-size:14px">${rangos.length?rangos.map(r=>
+        `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)">
+          <span>${r.txt}<br><span style="font-size:12px;color:var(--ink40)">${r.n} día${r.n===1?"":"s"}</span></span>
+          <button class="quitar" data-i="${r.desde}" style="font-size:12px">Quitar</button></div>`).join("")
+        :`<span style="color:var(--ink40)">Ninguna cargada.</span>`}</div>
+
+      ${delMes?`<div style="margin-top:16px;padding:10px 12px;border-radius:3px;background:#E9E9E4;border:1px solid var(--line);font-size:13px;line-height:1.5">
+        Este mes tenés ${delMes} día${delMes===1?"":"s"} de licencia. Por eso el mínimo bajó a ${P.base}.</div>`:""}
+
+      <div class="hint" style="margin-top:16px">Atajo: mantené apretado un día en el calendario para marcarlo o desmarcarlo.</div></div>`;
+
+    $("lagregar").onclick=()=>{
+      const a=$("ldesde").value, b=$("lhasta").value||a;
+      if(!a) return aviso("Falta la fecha de inicio");
+      if(b<a) return aviso("La fecha final es anterior a la inicial");
+      const s=new Set(cfg.licencias);
+      let d=new Date(a+"T00:00:00"), fin=new Date(b+"T00:00:00"), n=0;
+      while(d<=fin){
+        if(d.getDay()>=1&&d.getDay()<=5){ s.add(key(d)); n++ }
+        d.setDate(d.getDate()+1);
+      }
+      cfg.licencias=[...s].sort(); guardar(); pintar();
+      aviso(n?`${n} día${n===1?"":"s"} cargado${n===1?"":"s"}`:"El rango no tiene días hábiles");
+    };
+    p.querySelectorAll(".quitar").forEach(b=>b.onclick=()=>{
+      const r=rangos.find(x=>x.desde===b.dataset.i);
+      if(!r) return;
+      const fuera=new Set(r.dias);
+      cfg.licencias=cfg.licencias.filter(k=>!fuera.has(k));
+      guardar(); pintar(); aviso("Licencia quitada");
+    });
+  }
+
+  if(tab==="datos"){
+    const cuando=syncCuando?syncCuando.toLocaleString("es-AR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"—";
+    const fondo={ok:"#E4EDE4",cache:"#F3EAD6",error:"#F7DAD6",cargando:"#EDEFEA",local:"#F3EAD6"}[syncEstado];
+    const riesgo=!almacen.escribe ? "malo" : almacen.persistido ? "bien" : "aviso";
+    const fondoAlm={bien:"#E4EDE4",aviso:"#F3EAD6",malo:"#F7DAD6"}[riesgo];
+    const txtAlm={
+      bien:"Protegidos. El navegador marcó el almacenamiento como persistente, así que no lo borra ni cuando le falta espacio. Solo se pierde si borrás los datos del sitio a mano."
+        +(almacen.instalada?" Además está instalada en la pantalla de inicio.":""),
+      aviso:"Se guardan, pero sin protección explícita. En Chrome eso se concede solo cuando el navegador considera importante el sitio: instalala y usala unas veces y se activa. El riesgo real es bajo, pero bajate el respaldo igual."
+        +(almacen.instalada?"":" Todavía no está instalada en la pantalla de inicio."),
+      malo:"Este navegador no deja guardar nada. Suele pasar en modo incógnito. Tus cambios se van a perder al cerrar."
+    }[riesgo];
+
+    p.innerHTML=`<div style="margin-top:14px">
+      <div style="padding:10px 12px;border-radius:3px;font-size:13px;line-height:1.5;background:${fondoAlm};border:1px solid var(--line)">
+        <b>Guardado de tus datos</b><br>${txtAlm}
+      </div>
+      <div class="eyebrow" style="margin-top:16px">Feriados</div>
+      <div style="margin-top:6px;padding:10px 12px;border-radius:3px;font-size:13px;line-height:1.5;background:${fondo};border:1px solid var(--line)">
+        ${{ok:`Conectado. ${(feriadosRemotos||[]).length} feriados leídos el ${cuando}.`,
+           cache:`El Sheet no respondió. Estoy usando la copia guardada del ${cuando}.`,
+           error:"No se pudo leer el Sheet. Revisá que esté publicado como CSV.",
+           cargando:"Sincronizando…",
+           local:"Sin Sheet configurado. Estoy usando la lista de feriados que viene en el archivo."}[syncEstado]}
+      </div>
+      <div class="eyebrow" style="margin-top:16px">URL del Sheet publicado como CSV</div>
+      <input id="surl" value="${(cfg.sheetUrl||"").replace(/"/g,"&quot;")}" placeholder="https://docs.google.com/…/pub?output=csv" style="margin-top:6px">
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="on" id="ssave" style="flex:1">Guardar y sincronizar</button>
+        <button id="sclear">Quitar</button></div>
+      <div class="hint">En el Sheet: Archivo → Compartir → Publicar en la web → CSV. Columnas: fecha, nombre, tipo.</div>
+      <div class="eyebrow" style="margin-top:20px">Tu configuración</div>
+      <div class="hint">Se guarda en este navegador. Copiá el código para pasarla a otro dispositivo.</div>
+      <textarea id="bkp" rows="3" readonly>${btoa(unescape(encodeURIComponent(JSON.stringify(cfg))))}</textarea>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button id="bcopy" style="flex:1">Copiar código</button>
+        <button id="bfile" style="flex:1">Bajar respaldo</button>
+      </div>
+      <textarea id="rest" rows="3" placeholder="Pegá acá un código para restaurar" style="margin-top:12px"></textarea>
+      <button id="brest" style="width:100%;margin-top:6px">Restaurar</button></div>`;
+    $("ssave").onclick=()=>{cfg.sheetUrl=$("surl").value.trim();guardar();sincronizar(false)};
+    $("sclear").onclick=()=>{cfg.sheetUrl="";feriadosRemotos=null;syncEstado="local";guardar();pintar()};
+    $("bcopy").onclick=async()=>{try{await navigator.clipboard.writeText($("bkp").value);aviso("Código copiado")}catch(e){aviso("No se pudo copiar")}};
+    $("bfile").onclick=()=>{
+      const url=URL.createObjectURL(new Blob([JSON.stringify(cfg,null,2)],{type:"application/json"}));
+      const a=document.createElement("a");
+      a.href=url; a.download=`cuota-respaldo-${key(new Date())}.json`;
+      a.click(); URL.revokeObjectURL(url); aviso("Respaldo descargado");
+    };
+    $("brest").onclick=()=>{
+      try{
+        const txt=$("rest").value.trim();
+        const c=txt.startsWith("{")?JSON.parse(txt)                       // pegó el JSON del archivo
+                                   :JSON.parse(decodeURIComponent(escape(atob(txt))));
+        cfg=Object.assign({},POR_DEFECTO,c); guardar(); aviso("Configuración restaurada"); sincronizar(true); pintar();
+      }catch(e){ aviso("El código no es válido") }};
+  }
+}
+
+/* ───────────────────────── eventos ───────────────────────── */
+$("prev").onclick=()=>{cursor=new Date(cursor.getFullYear(),cursor.getMonth()-1,1);pintar()};
+$("next").onclick=()=>{cursor=new Date(cursor.getFullYear(),cursor.getMonth()+1,1);pintar()};
+$("copiar").onclick=async()=>{try{await navigator.clipboard.writeText(resumenTexto());aviso("Resumen copiado")}catch(e){aviso("No se pudo copiar")}};
+$("ics").onclick=descargarIcs;
+
+let presionado=null, largo=false;
+function iniciar(k){ largo=false; presionado=setTimeout(()=>{largo=true;toggleLicencia(k);aviso("Licencia marcada")},550) }
+function soltar(k){ clearTimeout(presionado); if(!largo&&k) toggleDia(k) }
+$("calendario").addEventListener("pointerdown",e=>{const b=e.target.closest("button[data-k]");if(b)iniciar(b.dataset.k)});
+$("calendario").addEventListener("pointerup",e=>{const b=e.target.closest("button[data-k]");soltar(b&&b.dataset.k)});
+$("calendario").addEventListener("pointerleave",()=>clearTimeout(presionado));
+$("calendario").addEventListener("contextmenu",e=>e.preventDefault());
+["lofi","lcasa"].forEach(id=>$(id).addEventListener("click",e=>{
+  const b=e.target.closest("button[data-k]"); if(b) toggleDia(b.dataset.k)}));
+
+cargar();
+try{ const c=JSON.parse(localStorage.getItem("cuota:feriados")||"null");
+     if(c&&c.out){feriadosRemotos=c.out;syncEstado="cache";syncCuando=new Date(c.t)} }catch(e){}
+pintar();
+pedirPersistencia();
+if(cfg.sheetUrl) sincronizar(true);
+if("serviceWorker" in navigator && location.protocol==="https:")
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
