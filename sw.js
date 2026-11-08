@@ -3,7 +3,7 @@
    - Resto de archivos propios: cache primero, y se refresca en segundo plano.
    - El CSV del Sheet nunca pasa por acá.
 */
-const CACHE = "cuota-v2";
+const CACHE = "cuota-v3";
 const SHELL = ["./", "./index.html", "./manifest.json", "./icono.png"];
 
 self.addEventListener("install", e => {
