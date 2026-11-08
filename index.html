@@ -190,7 +190,7 @@ const POR_DEFECTO={
 };
 let cfg=Object.assign({},POR_DEFECTO);
 let feriadosRemotos=null, syncEstado="local", syncCuando=null;
-let cursor=new Date(new Date().getFullYear(),new Date().getMonth()+1,1);
+let cursor=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 let tab=null;
 
 let almacen={escribe:false,persistido:false,instalada:false};
